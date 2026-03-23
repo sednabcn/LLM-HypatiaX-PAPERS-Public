@@ -1,4 +1,4 @@
-# HypatiaX: Why Extrapolation Breaks Naïve Analytical Discovery
+# HypatiaX: A Hybrid Symbolic-Neural Framework for Extrapolation-Reliable Analytical Discovery
 
 [![JMLR](https://img.shields.io/badge/JMLR-2026-blue)](https://jmlr.org)
 [![Python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org)
@@ -6,7 +6,7 @@
 
 Official code repository for the JMLR paper:
 
-> **Why Extrapolation Breaks Naïve Analytical Discovery**
+> **HypatiaX: A Hybrid Symbolic-Neural Framework for Extrapolation-Reliable Analytical Discovery**
 > Ruperto Pedro Bonet Chaple
 > *Journal of Machine Learning Research*, 2026
 
@@ -65,8 +65,8 @@ Audit and traceability scripts are in `../code/scripts/`
 ### 1. Install
 
 ```bash
-git clone https://github.com/sednabcn/LLM-HypatiaX-Papers
-cd LLM-HypatiaX-Papers/papers/2025-JMLR
+git clone https://github.com/sednabcn/LLM-HypatiaX-PAPERS-Public
+cd LLM-HypatiaX-PAPERS-Public/papers/2025-JMLR
 pip install -r requirements.txt
 cd hypatiax
 ```
@@ -102,6 +102,8 @@ python tools/visualizations/create_visualizations.py --defi73   # Figs 11–13
 
 ## Full Reproduction Run Order
 
+> All paths relative to `papers/2025-JMLR/hypatiax/`. Run in order — each campaign's outputs feed the next.
+
 ```bash
 # ── Campaign 1: Pure LLM Baseline (~10 min, no Julia needed) ─────────────
 python core/base_pure_llm/baseline_pure_llm.py
@@ -109,34 +111,48 @@ python core/base_pure_llm/baseline_pure_llm_defi.py
 # → data/results/standalone_llm_nn/
 
 # ── Campaign 2: Pure Symbolic PySR (~2 h, Julia required) ────────────────
-python protocols/experiment_protocol_all_18_a.py --no-cache
+python protocols/experiment_protocol_all_18_a.py --seed 42 --no-cache --v2
 # → data/results/hybrid_pysr/all_domains/llm_20260113_112048/
 
 # ── Campaign 3: LLM-Guided Hybrid v40 (~35 min) ───────────────────────────
-python protocols/experiment_protocol_all_30.py --no-cache
+python protocols/experiment_protocol_all_30.py --seed 42 --no-cache --v2
 # → data/results/llm_guided/all_domains/llm_20260114_183940/
 
 # ── Campaign 4: DeFi Suite (~45 min) ─────────────────────────────────────
-python protocols/experiment_protocol_defi_20.py --no-cache
+python protocols/experiment_protocol_defi_20.py --seed 42 --no-cache --v2
 # → data/results/hybrid_pysr/defi/
 
 # ── Campaign 5: Comparative Analysis & Statistics ─────────────────────────
+# Step 5a — cross-system comparative run (canonical script, copied from legacy/):
+#   cp legacy/experiments/ultimate_comparative_suite_complete_.py \
+#      experiments/comparison/
+python experiments/comparison/ultimate_comparative_suite_complete_.py
+# → data/results/comparison_results/extrapolation/comparison_FIXED_<ts>.json
+
+# Step 5b — merge all campaign outputs (reads Campaign 1 + Step 5a outputs)
 python experiments/comparison/merge_all_systems.py
+# → data/results/to_generate_figures/all_systems_merged.json
+
+# Step 5c — independent cross-system comparison (does not depend on 5b)
 python experiments/comparison/test_suite_comparative_v3.py
-python analysis/statistical_analysis_full.py
+# → data/results/comparison_results/strategic_tests_<domain>_<ts>.json
+
+python analysis/statistical_analysis_full.py --v2
 # → data/results/comparison_results/
-# → data/results/to_generate_figures/
 
-# ── Campaign 6: DeFi Extrapolation 73-Case Benchmark (v2) ────────────────
-python core/generation/hybrid_defi_system/complete_defi_hybrid_system.py --extrap73
-# → data/results/extrap_73/
+# ── Campaign 6: DeFi Extrapolation 73-Case Benchmark (v2) (~44 min) ──────
+python experiments/tests/test_enhanced_defi_extrapolation.py \
+    --fixed-denominator 66 --nan-penalty --v2
+# → data/results/extrapolation/extrapolation_73cases_enhanced.json
 
-# ── Campaign 7: Feynman SR Benchmark (v2, ~3 h) ───────────────────────────
-python experiments/benchmarks/prod/benchmark_runner_v3.py --noiseless
+# ── Campaign 7: Feynman SR Benchmark (v2, ~73 min, Julia required) ────────
+python experiments/benchmarks/run_comparative_suite_benchmark_v2.py \
+    --noiseless --threshold 0.9999 --nn-seeds 3 --samples 200 \
+    --method-timeout 900 --pysr-timeout 900 --v2
 python experiments/benchmarks/run_noise_sweep_benchmark.py
 python experiments/benchmarks/run_sample_complexity_benchmark.py
-# → data/results/comparison_results/noiseless995/
-# → data/results/comparison_results/noise-sweep/
+# → data/results/comparison_results/noise-noiseless/noiseless/
+# → data/results/comparison_results/feynman-tests/noise-sweep/
 ```
 
 ---
@@ -147,8 +163,8 @@ python experiments/benchmarks/run_sample_complexity_benchmark.py
 |-----------|-----------|---------|-----------------|
 | Core 15 | 15 | Physics, Biology/Chem, DeFi AMM, DeFi Risk | `protocols/experiment_protocol_all_30.py` |
 | DeFi Suite | 23 | DeFi AMM, Risk, Liquidity, ES, Liquidation, Staking | `protocols/experiment_protocol_defi_20.py` |
-| DeFi Extrapolation | 73 (66 standard) | DeFi | `core/generation/hybrid_defi_system/complete_defi_hybrid_system.py` |
-| Feynman SR | 30 | Physics | `experiments/benchmarks/prod/benchmark_runner_v3.py` |
+| DeFi Extrapolation | 73 (66 standard) | DeFi | `experiments/tests/test_enhanced_defi_extrapolation.py` |
+| Feynman SR | 30 | Physics | `experiments/benchmarks/run_comparative_suite_benchmark_v2.py` |
 | Comparative suite | All | All | `experiments/comparison/test_suite_comparative_v3.py` |
 
 ---
@@ -219,8 +235,8 @@ python ../code/scripts/paper_repo_tracer.py \
 | Mann-Whitney U=0, p=1.11×10⁻⁶ | `analysis/statistical_analysis_full.py` | `comparison_results/methods-all/15/comparison_FIXED_20260124_150744.json` | `mann_whitney.U / .p` |
 | Hybrid 96.7% (29/30) | `protocols/experiment_protocol_all_30.py` | `llm_guided/.../checkpoint.json` | `passed / total_tests` |
 | NN error 1,231% | `experiments/comparison/test_suite_comparative_v3.py` | `extrap/all_domains_extrap_v4_20260124_131545.json` | `neural_network.extrap_error_pct_mean` |
-| DeFi hybrid 72.7% (n=66) | `complete_defi_hybrid_system.py` | `extrap_73/2317/full_run_20260227_231742.json` | `honest_comparison.hybrid.r2_99_rate` |
-| Feynman 96.7% recovery | `prod/benchmark_runner_v3.py` | `noiseless995/benchmark_results.json` | `results.Hybrid_DeFi.recovery_rate` |
+| DeFi hybrid 72.7% (n=66) | `experiments/tests/test_enhanced_defi_extrapolation.py` | `extrapolation/extrapolation_73cases_enhanced.json` | `honest_comparison.hybrid.r2_99_rate` |
+| Feynman 96.7% recovery | `experiments/benchmarks/run_comparative_suite_benchmark_v2.py` | `comparison_results/noise-noiseless/noiseless/protocol_core_noiseless_20260304_154510.json` | `results.Hybrid_DeFi.recovery_rate` |
 
 ---
 
@@ -280,7 +296,7 @@ scripts listed above.
 
 ```bibtex
 @article{bonetchaple2026hypatiax,
-  title     = {Why Extrapolation Breaks Na{\"{i}}ve Analytical Discovery},
+  title     = {HypatiaX: A Hybrid Symbolic-Neural Framework for Extrapolation-Reliable Analytical Discovery},
   author    = {Bonet Chaple, Ruperto Pedro},
   journal   = {Journal of Machine Learning Research},
   year      = {2026}

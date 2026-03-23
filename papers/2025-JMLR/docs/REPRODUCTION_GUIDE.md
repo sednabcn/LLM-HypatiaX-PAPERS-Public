@@ -25,25 +25,60 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 ## Quick Reproduction (Core Results)
 
+> All paths below are relative to `papers/2025-JMLR/hypatiax/`.
+> Run in this order — each step's outputs feed the next.
+
 ```bash
-# 1. Core 15 benchmark (§6.4) — ~2h on reference hardware
-python hypatiax/experiments/comparison/ultimate_comparative_suite_complete_.py \
-    --seed 42 --symbolic-timeout 1800 --v2
+# ── Step 1: Pure LLM Baseline (~10 min, no Julia needed) ─────────────────
+python core/base_pure_llm/baseline_pure_llm.py
+python core/base_pure_llm/baseline_pure_llm_defi.py
+# → data/results/standalone_llm_nn/
 
-# 2. DeFi 73-case benchmark (§6.5) — ~44 min
-python hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py \
+# ── Step 2: Core 15 — LLM-Guided Hybrid v40 (§6.4) — ~35 min ────────────
+python protocols/experiment_protocol_all_30.py --seed 42 --no-cache --v2
+# → data/results/llm_guided/all_domains/llm_20260114_183940/
+
+# ── Step 3: DeFi Suite — 73-case benchmark (§6.5) — ~44 min ─────────────
+python experiments/tests/test_enhanced_defi_extrapolation.py \
     --fixed-denominator 66 --nan-penalty --v2
+# → data/results/extrapolation/extrapolation_73cases_enhanced.json
 
-# 3. Feynman SR Phase 3 (§5.8) — ~1h 13min on reference hardware
-python hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py \
+# ── Step 4: Feynman SR Phase 3 (§5.8) — ~73 min, Julia required ──────────
+python experiments/benchmarks/run_comparative_suite_benchmark_v2.py \
     --noiseless --threshold 0.9999 --nn-seeds 3 --samples 200 \
     --method-timeout 900 --pysr-timeout 900 --v2
+# → data/results/comparison_results/noise-noiseless/noiseless/
 
-# 4. Statistical analysis (§7)
-python hypatiax/analysis/statistical_analysis_full.py --v2
+# ── Step 5a: Campaign 5 — cross-system comparative run (§6.4) — ~45 min ──
+# ultimate_comparative_suite_complete_.py was in legacy/experiments/;
+# copy it to experiments/comparison/ before running:
+#   cp legacy/experiments/ultimate_comparative_suite_complete_.py \
+#      experiments/comparison/
+python experiments/comparison/ultimate_comparative_suite_complete_.py
+# → data/results/comparison_results/extrapolation/comparison_FIXED_<ts>.json
 
-# 5. Generate all 13 figures
-python supplementaries/generate_figures/generate_figures.py --v2
+# ── Step 5b: Merge all campaign outputs (§7 pre-step) ─────────────────────
+# Reads: standalone_real_methods_<ts>.json  (Step 1, from standalone_llm_nn/)
+#        comparison_FIXED_<ts>.json         (Step 5a, from extrapolation/)
+#        systems_2_3_2_data.json            (pre-existing in repo)
+python experiments/comparison/merge_all_systems.py
+# → data/results/to_generate_figures/all_systems_merged.json
+
+# ── Step 5c: Independent cross-system comparison (§6.4) ───────────────────
+# Runs live experiments; does NOT depend on merge output
+python experiments/comparison/test_suite_comparative_v3.py
+# → data/results/comparison_results/strategic_tests_<domain>_<ts>.json
+
+# ── Step 6: Statistical analysis (reads all_systems_merged.json) ──────────
+python analysis/statistical_analysis_full.py --v2
+# → data/results/comparison_results/
+# → reports/extrapolation/tex/statistical_summary_73cases.tex
+
+# ── Step 6: Generate all figures ──────────────────────────────────────────
+python tools/visualizations/create_visualizations.py --v2
+python tools/utils/regenerate_figures.py
+python tools/visualizations/create_visualizations.py --defi73
+# → data/results/to_generate_figures/
 ```
 
 ---
@@ -52,15 +87,21 @@ python supplementaries/generate_figures/generate_figures.py --v2
 
 | Script | Type | Key Dependencies | Inputs | Outputs | Results Location | Paper Section |
 |--------|------|-----------------|--------|---------|-----------------|---------------|
+| `hypatiax/core/base_pure_llm/baseline_pure_llm.py` | py | anthropic, numpy, pandas | `ANTHROPIC_API_KEY` | `standalone_real_methods_<ts>.json` | `hypatiax/data/results/standalone_llm_nn/` | §5.2 Pure LLM Baseline |
+| `hypatiax/core/base_pure_llm/baseline_pure_llm_defi.py` | py | anthropic, numpy, pandas | `ANTHROPIC_API_KEY` | `standalone_real_methods_<ts>.json` | `hypatiax/data/results/standalone_llm_nn/` | §5.2 Pure LLM Baseline (DeFi) |
+| `hypatiax/protocols/experiment_protocol_all_30.py` | py | pysr, numpy, scipy, anthropic, pandas | `ANTHROPIC_API_KEY`, `SEED=42` | `checkpoint.json`, per-equation JSONs | `hypatiax/data/results/llm_guided/all_domains/llm_<ts>/` | §6.4 Core 15 |
 | `hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py` | py | pysr, numpy, scipy, anthropic, pandas | `experiment_protocol_benchmark_v2.py` (embedded), `ANTHROPIC_API_KEY` | `protocol_core_noiseless_<ts>.json`, `protocol_core_noisy_<ts>.json` | `hypatiax/data/results/comparison_results/feynman-tests/` | §5.8 Feynman SR |
 | `hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py` | py | pysr, numpy, scipy, pandas | `experiment_protocol_benchmark_v2.py` (embedded) | `noise_sweep_<ts>.json`, `noise_sweep_<ts>.csv` | `hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/` | §A.3 Noise Robustness |
 | `hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py` | py | pysr, numpy, scipy, pandas | `experiment_protocol_benchmark_v2.py` (embedded) | `sample_complexity_<ts>.json`, `sample_complexity_<ts>.csv` | `hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/` | §A.4 Sample Complexity |
-| `hypatiax/experiments/comparison/ultimate_comparative_suite_complete_.py` | py | pysr, numpy, scipy, anthropic, pandas | `ANTHROPIC_API_KEY`, protocols (embedded) | `all_domains_extrap_v4_<ts>.json`, `.txt` | `hypatiax/data/results/comparison_results/extrapolation/` | §6.4 Core 15 |
+| `hypatiax/experiments/comparison/ultimate_comparative_suite_complete_.py` | py | pysr, numpy, scipy, anthropic, pandas | `ANTHROPIC_API_KEY` (Pure LLM method) | `comparison_FIXED_<ts>.json` | `hypatiax/data/results/comparison_results/extrapolation/` | §6.4 Campaign 5 (9-method comparative) |
+| `hypatiax/experiments/comparison/merge_all_systems.py` | py | numpy, pandas | `standalone_real_methods_<ts>.json`, `comparison_FIXED_<ts>.json`, `systems_2_3_2_data.json` | `all_systems_merged.json` | `hypatiax/data/results/to_generate_figures/` | §7 Statistical Analysis (pre-step) |
+| `hypatiax/experiments/comparison/test_suite_comparative_v3.py` | py | pysr, numpy, scipy, anthropic, pandas | `ANTHROPIC_API_KEY`, protocols (embedded) | `strategic_tests_<domain>_<ts>.json` | `hypatiax/data/results/comparison_results/` | §6.4 Independent cross-system comparison (5-method) |
 | `hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py` | py | numpy, scipy, anthropic, pandas | `ANTHROPIC_API_KEY`, `experiment_protocol_defi_20.py` | `extrapolation_73cases_enhanced.json` | `hypatiax/data/results/extrapolation/` | §6.5 DeFi (73 cases, n=66) |
 | `hypatiax/analysis/statistical_analysis_full.py` | py | scipy, pandas, numpy, matplotlib | all result JSONs, `all_systems_merged.json` | LaTeX tables, Mann-Whitney results, Cohen's d | `reports/extrapolation/tex/statistical_summary_73cases.tex` | §7 Statistical Analysis |
-| `supplementaries/generate_figures/generate_figures.py` | py | matplotlib, seaborn, numpy, pandas | `reports/to_generate_figures/*.json`, `*.csv` | `figures/figure[1-9]*.pdf`, `figures/figure_*.pdf` | `figures/` (13 figures total) | All paper figures |
+| `hypatiax/tools/visualizations/create_visualizations.py` | py | matplotlib, seaborn, numpy, pandas | `data/results/to_generate_figures/*.json`, `*.csv` | `figures/figure[1-9]*.pdf`, `figures/figure_*.pdf` | `hypatiax/data/results/to_generate_figures/` | All paper figures |
+| `hypatiax/tools/utils/regenerate_figures.py` | py | matplotlib, seaborn, numpy, pandas | `data/results/to_generate_figures/*.json` | supplementary figures | `hypatiax/data/results/to_generate_figures/` | Supplementary figures |
 | `hypatiax/notebooks/01_data_generation.ipynb` | ipynb | numpy, pandas, matplotlib | none (generates synthetic data) | data generation verification | `hypatiax/data/` | Supplementary / tutorial |
-| `hypatiax/notebooks/06_statistical_tests.ipynb` | ipynb | scipy, pandas, numpy, matplotlib | `reports/to_generate_figures/all_systems_merged.json` | statistical test outputs | notebook output cells | §7 Statistical Analysis (interactive) |
+| `hypatiax/notebooks/06_statistical_tests.ipynb` | ipynb | scipy, pandas, numpy, matplotlib | `data/results/to_generate_figures/all_systems_merged.json` | statistical test outputs | notebook output cells | §7 Statistical Analysis (interactive) |
 
 ---
 
@@ -83,10 +124,10 @@ python supplementaries/generate_figures/generate_figures.py --v2
 
 ## Known Issues / Warnings
 
-- **Arrhenius hang** (Feynman test 4): Julia hangs without `--method-timeout 900`. Counted as genuine failure.
+- **Arrhenius hang** (Feynman test 4): Julia hangs without `--method-timeout 900`. Counted as genuine failure. Always pass this flag to `run_comparative_suite_benchmark_v2.py`.
 - **v1 superseded files**: do NOT use `noise_sweep_20260315_091018.json` or `sample_complexity_20260315_124310.json` — use v2 equivalents dated `_20260316_`.
 - **11/30 PureLLM passes** flagged `is_hardcoded=True` — excluded from all scientific comparisons, listed for completeness only.
-- **ANTHROPIC_API_KEY** required for: `ultimate_comparative_suite_complete_.py`, `test_enhanced_defi_extrapolation.py`, `run_comparative_suite_benchmark_v2.py` (Pure LLM method).
+- **ANTHROPIC_API_KEY** required for: `protocols/experiment_protocol_all_30.py`, `experiments/tests/test_enhanced_defi_extrapolation.py`, `experiments/benchmarks/run_comparative_suite_benchmark_v2.py` (Pure LLM method), `experiments/comparison/ultimate_comparative_suite_complete_.py` (Pure LLM method).
 - **PySR populations=2** on reference hardware (2-core CPU); increase on modern machines for faster/better results.
 - **DeFi denominator**: always use fixed n=66; per-method NaN exclusion gives incomparable inflated rates.
 

@@ -1,4 +1,4 @@
-# LLM-HypatiaX-PAPERS
+# LLM-HypatiaX-PAPERS-Public
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-yellow.svg)](papers/2025-JMLR/requirements.txt)
@@ -13,24 +13,80 @@ interpretation, and multi-layer validation.
 ## 📁 Repository Structure
 
 ```
-LLM-HypatiaX-PAPERS/
-├── papers/
-│   ├── 2025-JMLR/              # ← Primary paper (JMLR 2026) — start here
-│   │   ├── hypatiax/           # All reproducible code and data
-│   │   ├── requirements.txt    # Python dependencies
-│   │   ├── code/               # Audit and traceability scripts
-│   │   ├── submission/         # Submission packages
-│   │   ├── reviews/            # Review responses
-│   │   └── README.md
-│   ├── 2025-NeurIPS/           # Scaling laws (in preparation)
-│   ├── 2026-ICML/              # Multi-modal discovery (planning)
-│   └── 2025-AAAI/              # Explainability (planning)
-├── shared/                     # Shared datasets and utilities
-├── tools/                      # Repository management scripts
-├── templates/                  # Venue-specific LaTeX templates
-├── docs/                       # Repository documentation
-├── Dockerfile                  # Reproducible environment
-└── requirements.txt
+LLM-HypatiaX-PAPERS-Public/
+├── activate_hypatiax.sh
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── setup_environment.sh
+├── VERSION
+└── papers/
+    └── 2025-JMLR/              # ← Primary paper (JMLR 2026) — start here
+        ├── activate_hypatiax.sh
+        ├── pyproject.toml
+        ├── requirements.txt
+        ├── setup_environment.sh
+        ├── docs/
+        │   └── REPRODUCTION_GUIDE.md
+        └── hypatiax/           # All reproducible code and data
+            ├── __init__.py
+            ├── path.py
+            ├── README.md
+            ├── analysis/
+            │   ├── statistical_analysis_full.py
+            │   └── statistical_analysis_unified.py
+            ├── core/
+            │   ├── base_pure_llm/          # Pure LLM baselines
+            │   │   ├── baseline_pure_llm.py
+            │   │   ├── baseline_pure_llm_defi.py
+            │   │   └── baseline_pure_llm_defi_discovery.py
+            │   ├── generation/             # Hybrid system architectures
+            │   │   ├── hybrid_all_domains/
+            │   │   ├── hybrid_all_domains_llm_nn/
+            │   │   ├── hybrid_defi_llm_guided/
+            │   │   ├── hybrid_defi_llm_nn/
+            │   │   ├── hybrid_defi_system/
+            │   │   └── hybrid_llm_guide_validation/
+            │   └── training/               # NN training & adaptive config
+            │       ├── adaptive_config.py
+            │       ├── baseline_neural_network.py
+            │       ├── baseline_neural_network_defi.py
+            │       └── baseline_neural_network_defi_improved.py
+            ├── data/results/               # Experimental results (JSON/CSV)
+            │   ├── comparison_results/
+            │   │   ├── extrapolation/
+            │   │   ├── feynman-tests/noise-sweep/I.12.1-correction/
+            │   │   └── noise-noiseless/{15,noiseless}/
+            │   ├── extrapolation/
+            │   ├── hybrid_llm_nn/{all_domains,defi}/
+            │   ├── hybrid_pysr/{all_domains,defi}/
+            │   ├── llm_guided/{all_domains,defi}/
+            │   ├── standalone_llm_nn/
+            │   └── to_generate_figures/
+            ├── experiments/
+            │   ├── benchmarks/             # Noise-sweep, sample-complexity, hybrid
+            │   ├── comparison/             # Cross-system comparative suite
+            │   └── tests/                  # Extrapolation & DeFi test protocols
+            ├── notebooks/                  # End-to-end reproduction notebooks
+            │   ├── 01_data_generation.ipynb
+            │   ├── 02_pure_llm_experiments.ipynb
+            │   ├── 03_hybrid_experiments.ipynb
+            │   ├── 04_extrapolation_analysis.ipynb
+            │   ├── 05_figure_generation.ipynb
+            │   └── 06_statistical_tests.ipynb
+            ├── protocols/                  # Experiment protocol scripts
+            ├── tools/
+            │   ├── symbolic/               # HypatiaX v40 engine & detectors
+            │   ├── utils/                  # JSON, figure, comparison helpers
+            │   ├── validation/             # Dimensional, domain, ensemble validators
+            │   └── visualizations/         # Plot and figure generation
+            └── legacy/                     # Archived prior versions (reference only)
+                ├── analysis/
+                ├── core/generation/
+                ├── experiments/
+                ├── protocols/
+                └── tools/
 ```
 
 ---
@@ -38,8 +94,8 @@ LLM-HypatiaX-PAPERS/
 ## 🚀 Quick Start (JMLR paper)
 
 ```bash
-git clone https://github.com/sednabcn/LLM-HypatiaX-Papers
-cd LLM-HypatiaX-Papers/papers/2025-JMLR
+git clone https://github.com/sednabcn/LLM-HypatiaX-PAPERS-Public
+cd LLM-HypatiaX-PAPERS-Public/papers/2025-JMLR
 pip install -r requirements.txt        # Julia ≥ 1.9 required for PySR campaigns
 cd hypatiax
 ```
@@ -85,7 +141,7 @@ full details and the v2 correction notes.
 
 ```bibtex
 @article{bonetchaple2026hypatiax,
-  title={Why Extrapolation Breaks Na{\"i}ve Analytical Discovery},
+  title={HypatiaX: A Hybrid Symbolic-Neural Framework for Extrapolation-Reliable Analytical Discovery},
   author={Bonet Chaple, Ruperto Pedro},
   journal={Journal of Machine Learning Research},
   year={2026}
